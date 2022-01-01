@@ -10,7 +10,7 @@ unknown_key = bytes(list)
 my_string = "Lorem ipsum dolor amir eret colomun"
 
 
-def is_ecb(oracle, input_string, encoding='base64'):
+def is_aes_128_ecb(oracle, input_string, encoding='base64'):
     ciphertext = oracle(input_string)
     decoded_msg = b''
     if encoding == 'base64':
@@ -32,7 +32,7 @@ def is_ecb(oracle, input_string, encoding='base64'):
 
 def detect_mode(oracle):
     in1 = bytes([random.randint(1, 127)]) * 48
-    if is_ecb(oracle, in1) == False:
+    if is_aes_128_ecb(oracle, in1) == False:
         return "encrypted with CBC"
     else:
         return "encrypted with ECB"
