@@ -3,6 +3,10 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from collections import Counter
 
+"""This is a black-box attack on an oracle that exploits the statelessness of AES-128-ECB and the block size (16 
+bytes) to decrypt a secret message. This sort of attack could be used on vulnerable webservers (implementing ECB 
+encryption) to extract information on user data, and even (in a smaller set of cases) achieve authentication as 
+admin. """
 
 # Consistent but unknown encryption key
 key_bytes = [21, 200, 56, 242, 28, 153, 199, 148, 241, 165, 143, 49, 73, 54, 251, 42]
