@@ -4,9 +4,9 @@ from Crypto.Util.Padding import pad
 from collections import Counter
 
 
-# Consistent but unknown key
-list = [21, 200, 56, 242, 28, 153, 199, 148, 241, 165, 143, 49, 73, 54, 251, 42]
-unknown_key = bytes(list)
+# Consistent but unknown encryption key
+key_bytes = [21, 200, 56, 242, 28, 153, 199, 148, 241, 165, 143, 49, 73, 54, 251, 42]
+unknown_key = bytes(key_bytes)
 my_string = "Lorem ipsum dolor amir eret colomun"
 
 
@@ -32,7 +32,7 @@ def is_aes_128_ecb(oracle, input_string, encoding='base64'):
 
 def detect_mode(oracle):
     in1 = bytes([random.randint(1, 127)]) * 48
-    if is_aes_128_ecb(oracle, in1) == False:
+    if not is_aes_128_ecb(oracle, in1):
         return "encrypted with CBC"
     else:
         return "encrypted with ECB"
@@ -54,8 +54,9 @@ def ecb_encryption_oracle(your_string, encoding='base64'):
         return ciphertext.hex()
 
 
+# Determines the length of the oracle's encryption key
 def find_block_size(oracle, in_string):
-    size1 = 0
+    block_size = 0
     oracle_outputs = [base64.b64decode(oracle(in_string[:i])) for i in range(1, 33)]
     for size in range(1, 33):
         first_bytes = oracle_outputs[size - 1][:size]
@@ -64,20 +65,18 @@ def find_block_size(oracle, in_string):
             if ith_bytes != first_bytes:
                 break
             else:
-                size1 = size
-    return size1
+                block_size = size
+    return block_size
 
 
 def brute_byte(oracle, test_input, recovered_bytes, target_output):
     char_dict = {}
-    count2 = 0
     result = b''
     # creates a "codebook" that maps each ASCII character (0-255) to an output of the ECB oracle
     for i in range(255):
         test1 = test_input + recovered_bytes + bytes([i])
-        outtest1 = base64.b64decode(oracle(test1))[:16]
-        char_dict[bytes([i])] = outtest1
-        count2 += 1
+        out_test1 = base64.b64decode(oracle(test1))[:16]
+        char_dict[bytes([i])] = out_test1
     # determines the codebook entry that matches the current output of the oracle -> saves the matching character
     for char, oracle_answer in char_dict.items():
         if oracle_answer == target_output:
@@ -89,45 +88,43 @@ def brute_byte(oracle, test_input, recovered_bytes, target_output):
 def decrypt_string(oracle, block_size):
     start = 1
     block_bound1, block_bound2 = 0, block_size
-    in1 = b'A' * block_size
-    recov_bytes = b''
+    controlled = b'A' * block_size
+    found_bytes = b''
     # Recovers the first 16 bytes of the message
     for a in range(block_size):
-        in2 = b''.join((in1, recov_bytes))[start:]
-        output = base64.b64decode(oracle(in2))[block_bound1:block_bound2]
-        recov_bytes += brute_byte(oracle, in2, recov_bytes, output)
+        attacker_input = b''.join((controlled, found_bytes))[start:]
+        first_output = base64.b64decode(oracle(attacker_input))[block_bound1:block_bound2]
+        found_bytes += brute_byte(oracle, attacker_input, found_bytes, first_output)
         start += 2
     block_bound1 += block_size
     block_bound2 += block_size
-    start1, start2 = 1, 1
-    count2 = 0
+    start_a, start_b = 1, 1
     bytes_left = True
     # Recovers the remainder of the message
     while bytes_left:
-        in3 = in1[start1:]
-        s_out = base64.b64decode(oracle(in3))[block_bound1:block_bound2]
-        new_byte = brute_byte(oracle, recov_bytes[start2:], b'', s_out)
+        attacker_input = controlled[start_a:]
+        output = base64.b64decode(oracle(attacker_input))[block_bound1:block_bound2]
+        new_byte = brute_byte(oracle, found_bytes[start_b:], b'', output)
         if new_byte == b'':
             bytes_left = False
         else:
-            recov_bytes += brute_byte(oracle, recov_bytes[start2:], b'', s_out)
-        start2 += 1
-        start1 += 1
+            found_bytes += brute_byte(oracle, found_bytes[start_b:], b'', output)
+        start_b += 1
+        start_a += 1
         # whenever a new block of the message is recovered, the section of the output on which the attacker
         # focuses is shifted by the block size (16) -> decryption can continue to the end of the message
-        if len(recov_bytes) % block_size == 0:
+        if len(found_bytes) % block_size == 0:
             block_bound1 += block_size
             block_bound2 += block_size
-            start1 = 1
-        count2 += 1
-    return recov_bytes.decode()
+            start_a = 1
+    return found_bytes.decode()
 
 
 def main():
     size = find_block_size(ecb_encryption_oracle, my_string.encode())
     print(detect_mode(ecb_encryption_oracle), end='\n\n')
-    k = decrypt_string(ecb_encryption_oracle, size)
-    print('Secret message:\n\n' + k)
+    oracle_secret = decrypt_string(ecb_encryption_oracle, size)
+    print('Secret message:\n\n' + oracle_secret)
 
 
 if __name__ == '__main__':
