@@ -47,7 +47,7 @@ def ecb_encrypt(key, message):
     return cipher.encrypt(message)
 
 
-def ecb_encryption_oracle(your_string, encoding='base64'):
+def oracle(your_string, encoding='base64'):
     # string we are trying to decrypt ("unknown-string")
     unknown_string = b'Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK'
     plaintext = pad(b''.join((your_string, base64.b64decode(unknown_string))), 16)
@@ -125,9 +125,9 @@ def decrypt_string(oracle, block_size):
 
 
 def main():
-    size = find_block_size(ecb_encryption_oracle, my_string.encode())
-    print(detect_mode(ecb_encryption_oracle), end='\n\n')
-    oracle_secret = decrypt_string(ecb_encryption_oracle, size)
+    size = find_block_size(oracle, my_string.encode())
+    print(detect_mode(oracle), end='\n\n')
+    oracle_secret = decrypt_string(oracle, size)
     print('Secret message:\n\n' + oracle_secret)
 
 
